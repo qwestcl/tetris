@@ -1,0 +1,445 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <conio.h>
+#include <time.h>
+#include <windows.h>
+#include <string.h>
+
+#define A 21
+#define B 15
+#define LEFT 75
+#define RIGHT 77
+#define UP 72
+#define DOWN 80
+#define SPACE 32
+#define ESC 27
+#define ENTER 13
+
+int stage[A][B]={{0},{0}};
+int block[4][4] ={{0},{0}};
+int field[A][B] ={{0},{0}};
+int massBlock[7][4][4] =
+{{{0,1,0,0},
+  {0,1,0,0},
+  {0,1,0,0},
+  {0,1,0,0}},
+ {{0,1,1,0},
+  {0,1,0,0},
+  {0,1,0,0},
+  {0,0,0,0}},
+ {{0,0,1,0},
+  {0,1,1,0},
+  {0,1,0,0},
+  {0,0,0,0}},
+ {{0,1,0,0},
+  {0,1,1,0},
+  {0,0,1,0},
+  {0,0,0,0}},
+ {{0,1,0,0},
+  {1,1,1,0},
+  {0,0,0,0},
+  {0,0,0,0}},
+ {{0,1,1,0},
+  {0,1,1,0},
+  {0,0,0,0},
+  {0,0,0,0}},
+ {{0,1,1,0},
+  {0,0,1,0},
+  {0,0,1,0},
+  {0,0,0,0}}};
+int y = 1;
+int x = 5;
+int gameover = 0;
+int k;
+int score = 0;
+
+void GoToXY(int, int);
+void Initialize(void);
+int CreateBlock(void);
+void ShowField(void);
+int Check(int, int);
+void MoveBlock(int, int);
+void LockBlock(void);
+void ControlBlock(void);
+void NextBlock(void);
+void CheckLines(void);
+void Menu(void);
+int TurnBlock(void);
+void NewFunc(void);
+void Normal(void);
+
+int main()
+{
+    Menu();
+    return 0;
+}
+
+void GoToXY(int xpos, int ypos)
+{
+    COORD scrn; //cтруктура (2 параметра(x,y) типа short)
+    HANDLE hOuput = GetStdHandle(STD_OUTPUT_HANDLE);
+    /*Функци  GetStdHandle извлекает дескриптор дл  стандартного ввода данных, стандартного
+   *вывода или стандартной ошибки устройства;
+   *
+   *дескриптор позвол ет сослатьс  на некий объект операционной системы. Дескрипторы позвол ют ссылатьс
+   *на такие объекты, как окна, объекты  дра (файлы, процессы, потоки, объекты синхронизации и др)*/
+    scrn.X = xpos; scrn.Y = ypos;
+    SetConsoleCursorPosition(hOuput,scrn); //установка позиции курсора в указанном месте
+}
+
+void Initialize()
+{
+    gameover = 0;
+    int i, j;
+    for(i = 0; i <= A-1; ++i) {
+        for(j = 0; j <= B-1; ++j) {
+            if((j == 0) || (j == B-1) || (i == A-1) || (i == 0)) {
+                field[i][j] = stage[i][j] = 9;
+            }
+            else {
+                field[i][j] = stage[i][j] = 0;
+            }
+        }
+    }
+    CreateBlock();
+    ShowField();
+}
+
+int CreateBlock()
+{
+    int i, j;
+    y = 1;
+    x = 5;
+    for(i = 0; i<4; ++i) {
+        for(j = 0; j<4; ++j) {
+            block[i][j]=massBlock[k][i][j];
+        }
+    }
+
+    for(i = 0; i<4; ++i) {
+        for(j = 0; j<4; ++j) {
+            field[i+y][j+x] = stage[i+y][j+x] + block[i][j];
+            if(field[i+y][j+x] ==  2) {
+                gameover = 1;
+                return 1;
+            }
+        }
+        srand(time(NULL));
+        k=rand()%7;
+    }
+    return 0;
+}
+
+void ShowField(void)
+{
+    int i;
+    int j;
+//    char n;
+    system("cls");
+    for(i = 0; i<A; ++i) {
+        for(j = 0; j < B; ++j) {
+            if (field[i][j] == 0) printf(" ");
+            else
+                if (field[i][j] == 9) printf("*");
+                else printf("@");
+            //            if (field[i][j] == 1) printf("@");
+        }
+        printf("\n");
+    }
+    NextBlock();
+
+    if (gameover) {
+        system("cls");
+        GoToXY(A/2, B/2);
+        printf("Игра закончена... Вы проиграли!\n\t\tНажмите любую клавишу!");
+        getch();
+    }
+}
+
+int Check(int x2, int y2)
+{
+    int i, j;
+    for(i = 0; i<4; ++i) {
+        for(j = 0; j<4; ++j) {
+            if(block[i][j]) {
+                if(stage[y2 + i][x2 + j] != 0) {
+                    return 1;
+                }
+            }
+        }
+    }
+    return 0;
+}
+
+void MoveBlock(int x2, int y2)
+{
+    int i, j;
+    for(i = 0; i<4; ++i) {
+        for(j = 0; j<4; ++j) {
+            field[y+i][x+j] -= block[i][j];
+        }
+    }
+    x = x2;
+    y = y2;
+    for(i = 0; i<4; ++i) {
+        for(j = 0; j<4; ++j) {
+            field[y+i][x+j] += block[i][j];
+        }
+    }
+    ShowField();
+}
+
+void LockBlock(void)
+{
+    int i, j;
+    for(i = 0; i<A; ++i) {
+        for(j = 0; j<B; ++j) {
+            stage[i][j] = field[i][j];
+        }
+    }
+    CheckLines();
+    for(i = 0; i<A; ++i) {
+        for(j = 0; j<B; ++j) {
+            field[i][j] = stage[i][j];
+        }
+    }
+}
+
+void ControlBlock(void)
+{
+    char key;
+    key = getch();
+    switch(key) {
+    case RIGHT:
+        if(!Check(x+1, y)) {
+            MoveBlock(x+1, y);
+        }
+        break;
+    case LEFT:
+        if(!Check(x-1, y)) {
+            MoveBlock(x-1, y);
+        }
+        break;
+    case UP:
+        TurnBlock();
+        break;
+    }
+}
+
+void NextBlock(void)
+{
+    int i,j;
+    GoToXY(A, 0);
+    printf("Следующа фигура: \n");
+    GoToXY(A, 1);
+    for (i=0; i<4; ++i) {
+        for (j=0; j<4; ++j) {
+            if (massBlock[k][i][j]) printf("@");
+            else printf(" ");
+        }
+        printf("\n");
+        GoToXY(A, i+2);
+    }
+    printf("Очки: %d", score);
+}
+
+void CheckLines()
+{
+    int i, j, f;
+    int comp;
+    int lines = 0;
+    while(1) {
+        for(i = 0; i<A-1; ++i) {
+            comp = 1;
+            for(j = 1; j<B-1; ++j) {
+                if(stage[i][j] == 0) {
+                    comp = 0;
+                }
+            }
+            if(comp == 1) break;
+        }
+        if(comp == 0) break;
+        lines++;
+        for(j = 1; j<B-1; ++j) {
+            stage[i][j] = 0;
+        }
+        for(f = i; f>0; --f) {
+            for(j = 1; j<B-1; ++j) {
+                stage[f][j] = stage[f-1][j];
+            }
+        }
+    }
+    switch(lines) {
+    case 1:
+        score += 10;
+        break;
+    case 2:
+        score += 20;
+        break;
+    case 3:
+        score += 30;
+        break;
+    case 4:
+        score += 40;
+        break;
+    default:
+        break;
+    }
+}
+
+void Menu(void)
+{
+    int p = 1;
+    int c = 0;
+    const char* GAME_MENU = " 1. Начать игру (уровень сложности - легкий).\n"
+            "   2. Начать игру (уровень сложности - средний).\n"
+            "   3. Управление.\n"
+            "   4. Выход.";
+    const char* TETRIS =
+            "TTTTT EEEE TTTTT PPPP  И    И  СССС\n"
+            "  T   E      T   P   P И   ИИ С\n"
+            "  T   EEEE   T   PPPP  И  И И С\n"
+            "  T   E      T   P     И И  И С\n"
+            "  T   EEEE   T   P     И    И  СССС\n";
+    printf("%s", TETRIS);
+    GoToXY(2, B/2);
+    printf("%s", GAME_MENU);
+    while(1)
+    {
+        c = getch();
+
+        GoToXY(2, B/2 + p - 1);
+        putchar(' ');
+
+        switch(c)
+        {
+        case 1:
+        case 2:
+        case 3:
+        case 4:
+            p = c;
+        case ENTER:
+            system("cls");
+            switch(p)
+            {
+            case 1:
+                Initialize();
+                while(!gameover) {
+                    if(kbhit()) {
+                        ControlBlock();
+                    }
+                    else if(!Check(x, y+1)) {
+                        MoveBlock(x, y+1);
+                    }
+                    else{
+                        LockBlock();
+                        CreateBlock();
+                        ShowField();
+                    }
+                    if (gameover) {
+                        system("cls");
+                        Menu();
+                    }
+                }
+                break;
+            case 2:
+                Initialize();
+                Normal();
+                while(!gameover) {
+                    if(kbhit()) {
+                        ControlBlock();
+                    }
+                    else if(!Check(x, y+1)) {
+                        MoveBlock(x, y+1);
+                    }
+                    else{
+                        LockBlock();
+                        CreateBlock();
+                        ShowField();
+                    }
+                    if (gameover) {
+                        system("cls");
+                        Menu();
+                    }
+                }
+            case 3:
+                system("cls");
+                printf("%s",
+                       "\t\x1B       Лево\n"
+                       "\t\x1A       Право\n"
+                       "\t\x18       Поверни\n"
+                       "\n\tНажмите любую клавишу...\n");
+                getch();
+                system("cls");
+                Menu();
+                break;
+            case 4:
+                exit(0);
+                break;
+            }
+
+            p = 1;
+            break;
+        case UP:
+            if(p > 1) p--;
+            break;
+        case DOWN:
+            if(p < 4) p++;
+            break;
+        case ESC:
+            return;
+        }
+        GoToXY(2, B/2 + p - 1);
+        putchar('\x1A');
+    }
+}
+
+int TurnBlock(void) {
+    int i;
+    int j;
+    int temp[4][4] = {{0},{0}};
+
+    for(i = 0; i<4; ++i) {
+        for(j = 0; j<4; ++j) {
+            temp[i][j] = block[i][j];
+        }
+    }
+
+    for(i = 0; i<4; ++i) {
+        for(j = 0; j<4; ++j) {
+            block[i][j] = temp[3-j][i];
+        }
+    }
+
+    if(Check(x, y)) {
+        for(i = 0; i<4; ++i) {
+            for(j = 0; j<4; ++j) {
+                block[i][j] = temp[i][j];
+            }
+        }
+        return 1;
+    }
+
+    for(i = 0; i<4; ++i) {
+        for(j = 0; j<4; ++j) {
+            field[y+i][x+j] -= temp[i][j];
+            field[y+i][x+j] += block[i][j];
+        }
+    }
+    ShowField();
+    return 0;
+}
+
+void Normal(void) {
+    int i;
+    int j;
+    int g;
+
+    srand(time(NULL));
+    g = rand()%10;
+    for (i = A-2; i >= (A-1) - g; --i) {
+        for (j=2; j<B-1; ++j) {
+            field[i][j] = stage[i][j] = rand()%2;
+        }
+    }
+}
